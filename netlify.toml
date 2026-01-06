@@ -1,0 +1,60 @@
+[build]
+  # Commande pour builder l'application
+  command = "npm run build"
+  # Dossier contenant les fichiers à déployer
+  publish = "dist"
+  # Base directory (racine du projet)
+  base = "."
+
+[build.environment]
+  # Version de Node.js (utilisez une version LTS)
+  NODE_VERSION = "18.x"
+
+# Redirections pour React Router
+# Toutes les routes sont redirigées vers index.html pour le client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers de sécurité
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# Headers pour les assets statiques (cache)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Headers pour les images
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Configuration des plugins (optionnel)
+# [plugins]
+#   package = "@netlify/plugin-nextjs"
+
+# Variables d'environnement (seront remplacées par celles du dashboard Netlify)
+# Ne mettez PAS de valeurs sensibles ici, utilisez le dashboard Netlify
+# [context.production.environment]
+#   VITE_API_URL = "https://votre-backend.onrender.com/api"
+
+# Configuration pour les branches (optionnel)
+# [context.branch-deploy]
+#   command = "npm run build"
+#   publish = "dist"
+
+# Configuration pour les previews (optionnel)
+# [context.deploy-preview]
+#   command = "npm run build"
+#   publish = "dist"
+
