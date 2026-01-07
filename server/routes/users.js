@@ -455,11 +455,11 @@ router.patch('/:id/settings', async (req, res) => {
       return res.status(401).json({ error: 'Invalid current password' });
     }
 
-    // Check if new email is already taken (if email is being changed)
+    // Check if new email is already taken by another user (if email is being changed)
     if (email && email !== user.email) {
       const [existingUsers] = await pool.query(
-        'SELECT id FROM users WHERE email = ?',
-        [email]
+        'SELECT id FROM users WHERE email = ? AND id != ?',
+        [email, id]
       );
 
       if (existingUsers.length > 0) {
@@ -467,7 +467,7 @@ router.patch('/:id/settings', async (req, res) => {
       }
     }
 
-    // Build update query
+    // Build update query - ensure we're updating the existing user, not creating a new one
     const updateFields = [];
     const updateValues = [];
 
@@ -486,12 +486,40 @@ router.patch('/:id/settings', async (req, res) => {
       return res.status(400).json({ error: 'No changes to update' });
     }
 
+    // Ensure we're updating the specific user by ID
     updateValues.push(id);
 
-    await pool.query(
+    // Use UPDATE with explicit WHERE clause to ensure we update the correct user
+    console.log(`[UPDATE SETTINGS] Updating user ID ${id} with fields: ${updateFields.join(', ')}`);
+    const updateResult = await pool.query(
       `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
       updateValues
     );
+
+    // Verify the update was successful
+    const affectedRows = updateResult[0]?.affectedRows || 0;
+    console.log(`[UPDATE SETTINGS] Update result: ${affectedRows} row(s) affected`);
+    
+    if (affectedRows === 0) {
+      return res.status(404).json({ error: 'User not found or no changes applied' });
+    }
+
+    // Double-check: ensure no duplicate was created
+    if (email && email !== user.email) {
+      const [duplicateCheck] = await pool.query(
+        'SELECT COUNT(*) as count FROM users WHERE email = ?',
+        [email]
+      );
+      if (duplicateCheck[0]?.count > 1) {
+        console.error(`[UPDATE SETTINGS] WARNING: Duplicate email detected after update: ${email}`);
+        // Delete the duplicate (keep the one we just updated)
+        await pool.query(
+          'DELETE FROM users WHERE email = ? AND id != ?',
+          [email, id]
+        );
+        console.log(`[UPDATE SETTINGS] Removed duplicate user with email: ${email}`);
+      }
+    }
 
     // Get updated user
     const [updatedUsers] = await pool.query(

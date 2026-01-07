@@ -1,7 +1,12 @@
 // Database connection - supports both MySQL (local) and PostgreSQL (production)
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Load .env.local for local development, use process.env for production
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: '.env.local' });
+} else {
+  dotenv.config(); // Use Railway/environment variables in production
+}
 
 let pool;
 
@@ -42,7 +47,7 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql:
   const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
+    password: process.env.DB_PASSWORD || 'Mounjikouki12',
     database: process.env.DB_NAME || 'bureaupro_db',
     waitForConnections: true,
     connectionLimit: 10,

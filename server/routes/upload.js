@@ -4,15 +4,33 @@ import cloudinary from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Load .env.local for local development, use process.env for production
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: '.env.local' });
+} else {
+  dotenv.config(); // Use Railway/environment variables in production
+}
 
 const router = express.Router();
 
-// Configure Cloudinary
+// Configure Cloudinary with validation
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+const apiKey = process.env.CLOUDINARY_API_KEY;
+const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+if (!cloudName || !apiKey || !apiSecret) {
+  console.error('❌ Cloudinary configuration missing!');
+  console.error('CLOUDINARY_CLOUD_NAME:', cloudName ? '✅ Set' : '❌ Missing');
+  console.error('CLOUDINARY_API_KEY:', apiKey ? '✅ Set' : '❌ Missing');
+  console.error('CLOUDINARY_API_SECRET:', apiSecret ? '✅ Set' : '❌ Missing');
+} else {
+  console.log('✅ Cloudinary configured');
+}
+
 cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: cloudName,
+  api_key: apiKey,
+  api_secret: apiSecret,
 });
 
 // Configure multer with Cloudinary storage
@@ -50,35 +68,65 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
+// Error handling middleware for multer
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+    }
+    return res.status(400).json({ error: `Upload error: ${err.message}` });
+  }
+  if (err) {
+    console.error('Upload middleware error:', err);
+    return res.status(400).json({ error: err.message || 'Upload failed' });
+  }
+  next();
+};
+
 // Single image upload
-router.post('/single', upload.single('image'), (req, res) => {
+router.post('/single', upload.single('image'), handleMulterError, (req, res) => {
   try {
+    console.log('📤 Upload request received');
+    
     if (!req.file) {
+      console.error('❌ No file in request');
       return res.status(400).json({ error: 'Aucun fichier uploadé' });
     }
 
+    console.log('✅ File received:', req.file.originalname);
+    console.log('📁 Cloudinary path:', req.file.path);
+
     // Cloudinary returns the URL in req.file.path
     const imageUrl = req.file.path;
+    console.log('✅ Upload successful:', imageUrl);
     res.json({ imageUrl });
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Erreur lors de l\'upload' });
+    console.error('❌ Upload error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Erreur lors de l\'upload: ' + (error.message || 'Unknown error') });
   }
 });
 
 // Multiple images upload
-router.post('/multiple', upload.array('images', 10), (req, res) => {
+router.post('/multiple', upload.array('images', 10), handleMulterError, (req, res) => {
   try {
+    console.log('📤 Multiple upload request received');
+    
     if (!req.files || req.files.length === 0) {
+      console.error('❌ No files in request');
       return res.status(400).json({ error: 'Aucun fichier uploadé' });
     }
 
+    console.log(`✅ ${req.files.length} file(s) received`);
+
     // Cloudinary returns URLs in req.files[].path
     const imageUrls = req.files.map(file => file.path);
+    console.log('✅ Upload successful:', imageUrls);
     res.json({ imageUrls });
   } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: 'Erreur lors de l\'upload' });
+    console.error('❌ Upload error:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: 'Erreur lors de l\'upload: ' + (error.message || 'Unknown error') });
   }
 });
 

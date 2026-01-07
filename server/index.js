@@ -11,7 +11,12 @@ import uploadRoutes from './routes/upload.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+// Load .env.local for local development, use process.env for production
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: '.env.local' });
+} else {
+  dotenv.config(); // Use Railway/environment variables in production
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
