@@ -169,19 +169,43 @@ export const uploadService = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/upload/single`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+    console.log('📤 Uploading image to:', `${API_BASE_URL}/upload/single`);
+    console.log('📤 File name:', file.name);
+    console.log('📤 File size:', file.size);
+    console.log('📤 File type:', file.type);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
-      throw new Error(errorData.error || 'Upload failed');
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload/single`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      console.log('📥 Upload response status:', response.status);
+      console.log('📥 Upload response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Upload error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || `Upload failed with status ${response.status}` };
+        }
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Upload successful, imageUrl:', data.imageUrl);
+      return data.imageUrl;
+    } catch (error: any) {
+      console.error('❌ Upload fetch error:', error);
+      if (error.message) {
+        throw error;
+      }
+      throw new Error(`Network error: ${error.message || 'Failed to connect to server'}`);
     }
-
-    const data = await response.json();
-    return data.imageUrl;
   },
 
   uploadImages: async (files: File[]): Promise<string[]> => {
