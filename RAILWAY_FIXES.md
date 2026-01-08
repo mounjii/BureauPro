@@ -2,16 +2,24 @@
 
 ## Issues Fixed
 
-### 1. Static Files MIME Type Error (NEW)
-**Issue**: JavaScript and CSS files being served with `text/html` MIME type instead of proper types, causing "Failed to load module script" errors.
+### 1. Static Files MIME Type Error (FIXED)
+**Issue**: JavaScript and CSS files being served with `application/json` MIME type (404 JSON response) or `text/html`, causing "Failed to load module script" errors and 404s.
+
+**Root Cause**: 
+- Static files not found (404) → catch-all route returning JSON response
+- OR dist folder not being found in Railway's working directory
 
 **Fixes Applied**:
 - Added explicit MIME type headers for static files (JS, CSS, JSON, SVG)
-- Excluded static asset paths (`/assets/`, `/images/`, file extensions) from catch-all route
-- Added logging to verify dist directory exists and contains files
-- Ensured `express.static()` serves files with correct Content-Type headers
+- Changed catch-all route to return plain text 404 (not JSON) for static files
+- Added intelligent path detection for dist folder (checks multiple possible locations)
+- Added comprehensive logging to diagnose file location issues
+- Excluded static asset paths from catch-all route properly
 
-**Important**: Make sure to run `npm run build` before deploying to Railway so the `dist` folder exists with all assets.
+**Important**: 
+- Railway build command must run: `npm install && NODE_ENV=production npm run build`
+- Check Railway logs for "✅ Found dist directory at:" message
+- Verify "📦 Assets directory contents" lists your JS/CSS files
 
 ### 2. Tailwind CDN Warning
 **Issue**: Warning about `cdn.tailwindcss.com` not being used in production.
@@ -94,17 +102,36 @@ After deployment, test:
 
 ## Troubleshooting
 
-### If static files still show MIME type errors:
+### If static files still show MIME type errors or 404s:
 1. **Check Railway build logs** - Verify `npm run build` ran successfully
+   - Look for "vite build" output
+   - Should see "dist" folder being created
+   
 2. **Check Railway server logs** - Look for:
-   - "✅ Dist directory exists"
-   - "📦 Assets directory contents" (should list JS/CSS files)
-3. **Verify dist folder structure** - Should have:
+   - "✅ Found dist directory at: [path]" (should show the path)
+   - "📦 Dist directory contents: [files]" (should list index.html, assets, etc.)
+   - "📦 Assets directory contents: [files]" (should list your JS/CSS files)
+   - "📄 Static file request: /assets/..." (shows if files are found)
+   
+3. **If dist not found**, check:
+   - Railway build command in `railway.json`: `npm install && NODE_ENV=production npm run build`
+   - Railway project settings → Build command should match
+   - Working directory in Railway (might need to adjust path)
+   
+4. **Verify dist folder structure** - Should have:
    - `dist/index.html`
    - `dist/assets/index-*.js`
    - `dist/assets/index-*.css`
-4. **Check Railway build command** - Must include `npm run build`
-5. **Verify file paths** - Check browser Network tab to see actual file paths being requested
+   
+5. **Check browser Network tab**:
+   - Look at the actual request URL
+   - Check response headers (should be correct MIME type, not application/json)
+   - Verify status code (should be 200, not 404)
+   
+6. **If files still 404**:
+   - The dist folder might be in a different location
+   - Check Railway logs for "Current working directory" and "__dirname"
+   - May need to adjust the dist path in server/index.js
 
 ### If upload still fails:
 1. Check Railway logs for Cloudinary configuration status

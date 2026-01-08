@@ -275,24 +275,67 @@ app.use((err, req, res, next) => {
 });
 
 // Serve frontend static files (after API routes)
-const distPath = path.join(__dirname, '..', 'dist');
-console.log('📁 Static files directory:', distPath);
+// Try multiple possible paths for dist folder (Railway might use different working directory)
+const possibleDistPaths = [
+  path.join(__dirname, '..', 'dist'),  // Standard: server/../dist
+  path.join(process.cwd(), 'dist'),     // Current working directory
+  path.resolve('dist'),                 // Absolute from cwd
+];
 
-// Check if dist directory exists
-if (fs.existsSync(distPath)) {
-  console.log('✅ Dist directory exists');
+let distPath = null;
+for (const possiblePath of possibleDistPaths) {
+  if (fs.existsSync(possiblePath)) {
+    distPath = possiblePath;
+    console.log('✅ Found dist directory at:', distPath);
+    break;
+  }
+}
+
+if (!distPath) {
+  distPath = path.join(__dirname, '..', 'dist'); // Default fallback
+  console.error('❌ Dist directory not found in any expected location!');
+  console.error('   Tried:', possibleDistPaths);
+  console.error('   Using fallback:', distPath);
+  console.error('   Current working directory:', process.cwd());
+  console.error('   __dirname:', __dirname);
+  console.error('   Run "npm run build" to create the dist folder');
+} else {
+  // Check dist directory contents
   const files = fs.readdirSync(distPath);
   console.log('📦 Dist directory contents:', files);
   if (fs.existsSync(path.join(distPath, 'assets'))) {
     const assets = fs.readdirSync(path.join(distPath, 'assets'));
     console.log('📦 Assets directory contents:', assets);
+  } else {
+    console.warn('⚠️ Assets subdirectory not found in dist folder');
   }
-} else {
-  console.error('❌ Dist directory does not exist!');
-  console.error('   Run "npm run build" to create the dist folder');
 }
 
+// Middleware to log static file requests for debugging (before express.static)
+app.use((req, res, next) => {
+  // Log requests for static assets
+  if (req.path.startsWith('/assets/') || req.path.match(/\.(js|css|json|svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot)$/)) {
+    const filePath = path.join(distPath, req.path);
+    const exists = fs.existsSync(filePath);
+    console.log(`📄 Static file request: ${req.path} - ${exists ? '✅ Found' : '❌ Not found'}`);
+    if (!exists) {
+      console.log(`   Expected path: ${filePath}`);
+      console.log(`   Dist directory exists: ${fs.existsSync(distPath)}`);
+      if (fs.existsSync(distPath)) {
+        const distContents = fs.readdirSync(distPath);
+        console.log(`   Dist contents: ${distContents.join(', ')}`);
+        if (fs.existsSync(path.join(distPath, 'assets'))) {
+          const assetsContents = fs.readdirSync(path.join(distPath, 'assets'));
+          console.log(`   Assets contents: ${assetsContents.join(', ')}`);
+        }
+      }
+    }
+  }
+  next();
+});
+
 // Serve static assets with proper MIME types
+// This middleware will serve files from dist/ and call next() if file not found
 app.use(express.static(distPath, {
   setHeaders: (res, filePath) => {
     // Set proper MIME types for different file extensions
@@ -320,15 +363,12 @@ app.get('*', (req, res) => {
   }
   
   // Don't serve index.html for static asset requests
-  // These should be handled by express.static above
+  // If express.static didn't find the file, return a plain 404 (not JSON)
   if (req.path.startsWith('/assets/') || 
       req.path.startsWith('/images/') || 
       req.path.match(/\.(js|css|json|svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot)$/)) {
-    return res.status(404).json({
-      success: false,
-      error: 'Static file not found',
-      path: req.path
-    });
+    console.error(`❌ Static file not found: ${req.path}`);
+    return res.status(404).send(`File not found: ${req.path}`);
   }
   
   // Serve frontend for all other routes (React Router)
