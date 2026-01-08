@@ -1,8 +1,8 @@
 import express from 'express';
 import multer from 'multer';
-import cloudinary from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
+import { Readable } from 'stream';
 
 // Load .env.local for local development, use process.env for production
 if (process.env.NODE_ENV !== 'production') {
@@ -30,30 +30,101 @@ if (!cloudName || !apiKey || !apiSecret) {
   console.log('   API Secret:', '****' + apiSecret.slice(-4));
 }
 
-cloudinary.v2.config({
+cloudinary.config({
   cloud_name: cloudName,
   api_key: apiKey,
   api_secret: apiSecret,
 });
+
+// Custom Multer Storage for Cloudinary v2
+class CloudinaryStorage {
+  constructor(options = {}) {
+    this.options = options;
+  }
+
+  _handleFile(req, file, cb) {
+    const buffer = [];
+    
+    file.stream.on('data', (chunk) => {
+      buffer.push(chunk);
+    });
+
+    file.stream.on('end', async () => {
+      try {
+        const fileBuffer = Buffer.concat(buffer);
+        const uploadOptions = {
+          folder: this.options.folder || 'test.bureaupro',
+          allowed_formats: this.options.allowed_formats || ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+          transformation: this.options.transformation || [
+            { width: 1200, height: 1200, crop: 'limit' },
+            { quality: 'auto' },
+            { fetch_format: 'auto' }
+          ],
+          resource_type: 'image',
+        };
+
+        // Upload to Cloudinary using upload_stream
+        const uploadPromise = new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            uploadOptions,
+            (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result);
+              }
+            }
+          );
+          
+          // Convert buffer to stream and pipe to Cloudinary
+          const readable = new Readable();
+          readable.push(fileBuffer);
+          readable.push(null);
+          readable.pipe(uploadStream);
+        });
+
+        const result = await uploadPromise;
+        
+        cb(null, {
+          fieldname: file.fieldname,
+          originalname: file.originalname,
+          encoding: file.encoding,
+          mimetype: file.mimetype,
+          size: result.bytes,
+          path: result.secure_url,
+          url: result.secure_url,
+          secure_url: result.secure_url,
+          public_id: result.public_id,
+        });
+      } catch (error) {
+        cb(error);
+      }
+    });
+
+    file.stream.on('error', (error) => {
+      cb(error);
+    });
+  }
+
+  _removeFile(req, file, cb) {
+    // Cloudinary handles file deletion separately if needed
+    // For now, we'll just call the callback
+    cb(null);
+  }
+}
 
 // Configure multer with Cloudinary storage
 let storage;
 if (cloudName && apiKey && apiSecret) {
   try {
     storage = new CloudinaryStorage({
-      cloudinary: cloudinary.v2,
-      params: async (req, file) => {
-        console.log('📁 Preparing upload to folder: test.bureaupro');
-        return {
-          folder: 'test.bureaupro', // Folder in Cloudinary
-          allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-          transformation: [
-            { width: 1200, height: 1200, crop: 'limit' }, // Max size
-            { quality: 'auto' }, // Auto optimize quality
-            { fetch_format: 'auto' } // Auto format (webp when possible)
-          ],
-        };
-      },
+      folder: 'test.bureaupro',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+      transformation: [
+        { width: 1200, height: 1200, crop: 'limit' },
+        { quality: 'auto' },
+        { fetch_format: 'auto' }
+      ],
     });
     console.log('✅ CloudinaryStorage configured successfully');
   } catch (error) {

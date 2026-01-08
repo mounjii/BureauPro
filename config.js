@@ -14,7 +14,7 @@ const isProduction = import.meta.env.PROD ||
 
 // Determine API base URL
 // Priority: 1. VITE_API_URL env var, 2. Relative /api in production, 3. localhost in dev
-let API_BASE_URL: string;
+let API_BASE_URL;
 
 if (import.meta.env.VITE_API_URL) {
   // Explicit API URL from environment variable (highest priority)
