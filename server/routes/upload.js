@@ -38,7 +38,7 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary.v2,
   params: async (req, file) => {
     return {
-      folder: 'burocycle/products', // Folder in Cloudinary
+      folder: 'test.bureaupro', // Folder in Cloudinary
       allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
       transformation: [
         { width: 1200, height: 1200, crop: 'limit' }, // Max size
