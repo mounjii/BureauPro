@@ -309,7 +309,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
         }
       }
 
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
       const token = localStorage.getItem('bureaupro_token');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',

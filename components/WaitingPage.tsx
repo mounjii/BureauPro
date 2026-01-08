@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/apiService';
+import { API_BASE_URL } from '../config.js';
 
 const WaitingPage: React.FC = () => {
   const user = authService.getCurrentUser();
@@ -31,7 +32,6 @@ const WaitingPage: React.FC = () => {
 
       try {
         setChecking(true);
-        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
         const response = await fetch(`${API_BASE_URL}/users/${user.id}`);
 
         if (response.ok) {
