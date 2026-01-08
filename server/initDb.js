@@ -2,28 +2,51 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 
-dotenv.config({ path: '.env.local' });
-
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'Mounjikouki12',
-};
+// Load .env.local for local development, use process.env for production
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: '.env.local' });
+} else {
+  dotenv.config(); // Use Railway/environment variables in production
+}
 
 async function initDatabase() {
   let connection;
+  let dbName;
+  
   try {
-    // Connect without database specified
-    connection = await mysql.createConnection(dbConfig);
-    console.log('Connected to MySQL server');
+    // Check if Railway MySQL URL is provided
+    if (process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL) {
+      const mysqlUrl = process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL;
+      console.log('Using MySQL connection URL from Railway');
+      // Parse URL to get database name
+      const urlParts = new URL(mysqlUrl);
+      dbName = urlParts.pathname.substring(1); // Remove leading '/'
+      
+      // Connect with database specified (Railway MySQL already has database in URL)
+      connection = await mysql.createConnection(mysqlUrl);
+      console.log(`Connected to MySQL server (database: ${dbName})`);
+      
+      // Database is already selected in the URL, no need to USE
+    } else {
+      // Use individual connection parameters (local development)
+      const dbConfig = {
+        host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+        user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+        password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || process.env.MYSQL_ROOT_PASSWORD || 'Mounjikouki12',
+      };
+      
+      // Connect without database specified
+      connection = await mysql.createConnection(dbConfig);
+      console.log('Connected to MySQL server');
 
-    // Create database if it doesn't exist
-    const dbName = process.env.DB_NAME || 'bureaupro_db';
-    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
-    console.log(`Database '${dbName}' ready`);
+      // Create database if it doesn't exist
+      dbName = process.env.DB_NAME || process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || 'bureaupro_db';
+      await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+      console.log(`Database '${dbName}' ready`);
 
-    // Use the database
-    await connection.query(`USE \`${dbName}\``);
+      // Use the database
+      await connection.query(`USE \`${dbName}\``);
+    }
 
     // Create users table
     await connection.query(`
@@ -296,13 +319,21 @@ async function initDatabase() {
   }
 }
 
-initDatabase()
-  .then(() => {
-    console.log('Database setup complete');
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error('Setup failed:', error);
-    process.exit(1);
-  });
+// Export the function for use in API endpoint
+export default initDatabase;
+
+// If run directly (not imported), execute initialization
+// Check if this file is being run directly
+const isMainModule = process.argv[1]?.endsWith('initDb.js');
+if (isMainModule) {
+  initDatabase()
+    .then(() => {
+      console.log('Database setup complete');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('Setup failed:', error);
+      process.exit(1);
+    });
+}
 

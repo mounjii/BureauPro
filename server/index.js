@@ -68,6 +68,52 @@ app.get('/api/health', async (req, res) => {
   res.status(statusCode).json(health);
 });
 
+// Database initialization endpoint (one-time use)
+app.post('/api/init-db', async (req, res) => {
+  try {
+    // Check if database is already initialized by checking if users table exists
+    try {
+      const [tables] = await pool.query(`
+        SELECT TABLE_NAME 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'
+      `);
+      
+      if (tables.length > 0) {
+        // Check if admin user exists
+        const [users] = await pool.query('SELECT id FROM users WHERE email = ?', ['simo@bureaupro.com']);
+        
+        if (users.length > 0) {
+          return res.json({ 
+            success: true, 
+            message: 'Database already initialized',
+            alreadyInitialized: true 
+          });
+        }
+      }
+    } catch (checkError) {
+      // Table doesn't exist, continue with initialization
+      console.log('Tables do not exist, initializing database...');
+    }
+
+    // Import and run initDb
+    const { default: initDatabase } = await import('./initDb.js');
+    await initDatabase();
+    
+    res.json({ 
+      success: true, 
+      message: 'Database initialized successfully',
+      alreadyInitialized: false 
+    });
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
   console.log(`📡 API endpoints available at http://0.0.0.0:${PORT}/api`);
