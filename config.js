@@ -21,7 +21,8 @@ if (import.meta.env.VITE_API_URL) {
   API_BASE_URL = import.meta.env.VITE_API_URL;
   // Don't allow localhost in production if explicitly set
   if (isProduction && API_BASE_URL.includes('localhost')) {
-    console.warn('⚠️ VITE_API_URL points to localhost in production! Using relative /api instead.');
+    // Silently override - this is expected behavior when VITE_API_URL is set incorrectly
+    // The relative /api path will work correctly since Railway serves both frontend and backend
     API_BASE_URL = '/api';
   }
 } else if (isProduction) {
