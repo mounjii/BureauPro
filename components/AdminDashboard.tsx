@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Product, User, UserPermissions } from '../types';
 import { productService, categoryService, uploadService, Category } from '../services/apiService';
 import { authService } from '../services/apiService';
+import { API_BASE_URL } from '../config.js';
 import BurocycleLogo from './BurocycleLogo';
 import AlertContainer, { AlertData } from './AlertContainer';
 import { normalizeImageUrl } from '../utils/imageUtils';
