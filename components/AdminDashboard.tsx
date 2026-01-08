@@ -97,7 +97,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
     } catch (err: any) {
       console.error('Error loading products:', err);
       const errorMessage = err.message || 'Erreur inconnue';
-      setError(`Erreur lors du chargement des produits: ${errorMessage}\n\nVérifiez que le serveur backend est en cours d'exécution sur http://localhost:3001`);
+      setError(`Erreur lors du chargement des produits: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
