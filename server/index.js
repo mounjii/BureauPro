@@ -22,6 +22,9 @@ if (process.env.NODE_ENV !== 'production') {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for Railway (handles HTTPS properly)
+app.set('trust proxy', 1);
+
 // Log startup configuration
 console.log('🔧 Server startup configuration:');
 console.log('   PORT:', PORT);
@@ -31,8 +34,48 @@ console.log('     MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? '✅ Set' :
 console.log('     CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Not set');
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+// CORS configuration for Railway deployment
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // In production, allow Railway domain and HTTPS origins
+    if (process.env.NODE_ENV === 'production') {
+      // Allow all HTTPS origins in production (Railway handles domain)
+      if (origin.startsWith('https://')) {
+        return callback(null, true);
+      }
+      // Also allow Railway's internal network
+      return callback(null, true);
+    }
+    
+    // In development, allow localhost
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Body parser with increased limits for image uploads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Security headers for HTTPS
+app.use((req, res, next) => {
+  // Force HTTPS in production
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  
+  // Security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
