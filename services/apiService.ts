@@ -1,6 +1,5 @@
 import { User, Product } from '../types';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { API_BASE_URL } from '../config.js';
 
 // Helper function for API calls
 async function apiCall(endpoint: string, options: RequestInit = {}) {

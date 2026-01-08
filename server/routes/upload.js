@@ -110,6 +110,10 @@ const handleMulterError = (err, req, res, next) => {
 router.post('/single', (req, res, next) => {
   console.log('📤 Upload request received');
   console.log('Content-Type:', req.headers['content-type']);
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  
   upload.single('image')(req, res, (err) => {
     if (err) {
       console.error('❌ Multer upload error:', err);
