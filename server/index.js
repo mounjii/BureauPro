@@ -351,6 +351,36 @@ app.use(express.static(distPath, {
   }
 }));
 
+// Helper function to fix HTML with correct asset filenames
+const fixHtmlAssetPaths = (htmlContent, distPath) => {
+  try {
+    // Read actual asset files from dist/assets
+    const assetsPath = path.join(distPath, 'assets');
+    if (fs.existsSync(assetsPath)) {
+      const assetFiles = fs.readdirSync(assetsPath);
+      const jsFile = assetFiles.find(f => f.endsWith('.js') && f.startsWith('index-'));
+      const cssFile = assetFiles.find(f => f.endsWith('.css') && f.startsWith('index-'));
+      
+      if (jsFile && cssFile) {
+        // Replace old hardcoded filenames with actual ones
+        let fixedHtml = htmlContent;
+        // Replace any old JS file references
+        fixedHtml = fixedHtml.replace(/\/assets\/index-[A-Za-z0-9]+\.js/g, `/assets/${jsFile}`);
+        // Replace any old CSS file references
+        fixedHtml = fixedHtml.replace(/\/assets\/index-[A-Za-z0-9]+\.css/g, `/assets/${cssFile}`);
+        
+        if (fixedHtml !== htmlContent) {
+          console.log(`✅ Fixed HTML asset paths: ${jsFile}, ${cssFile}`);
+          return fixedHtml;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('⚠️ Error fixing HTML asset paths:', error.message);
+  }
+  return htmlContent;
+};
+
 // Serve frontend index.html for all non-API and non-asset routes (client-side routing)
 app.get('*', (req, res) => {
   // Don't serve frontend for API routes
@@ -372,7 +402,17 @@ app.get('*', (req, res) => {
   }
   
   // Serve frontend for all other routes (React Router)
-  res.sendFile(path.join(distPath, 'index.html'));
+  const indexPath = path.join(distPath, 'index.html');
+  
+  // Read and fix HTML if needed
+  if (fs.existsSync(indexPath)) {
+    let htmlContent = fs.readFileSync(indexPath, 'utf-8');
+    htmlContent = fixHtmlAssetPaths(htmlContent, distPath);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(htmlContent);
+  }
+  
+  res.status(404).send('index.html not found');
 });
 
 // Start server with error handling

@@ -18,6 +18,14 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      build: {
+        // Ensure clean build - remove old files
+        emptyOutDir: true,
+        // Ensure proper HTML injection
+        rollupOptions: {
+          input: path.resolve(__dirname, 'index.html'),
+        },
+      },
     };
 });
