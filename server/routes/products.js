@@ -240,10 +240,12 @@ router.put('/:id', async (req, res) => {
       available
     });
 
+    // Update query - updated_at will be added by migration if needed
+    // For now, we don't include it to avoid errors if column doesn't exist
     await pool.query(
       `UPDATE products 
        SET name = ?, description = ?, price = ?, category = ?, image_url = ?, 
-           images = ?, features = ?, stock = ?, available = ?, updated_at = CURRENT_TIMESTAMP
+           images = ?, features = ?, stock = ?, available = ?
        WHERE id = ?`,
       updateValues
     );

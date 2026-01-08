@@ -167,6 +167,26 @@ async function initDatabase() {
       console.log('Available column check completed');
     }
 
+    // Add updated_at column if it doesn't exist (for existing databases)
+    try {
+      const [updatedAtColumns] = await connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'products' AND COLUMN_NAME = 'updated_at'
+      `, [dbName]);
+      
+      if (updatedAtColumns.length === 0) {
+        await connection.query(`
+          ALTER TABLE products 
+          ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        `);
+        console.log('Updated_at column added to existing products table');
+      }
+    } catch (error) {
+      // Column might already exist or table doesn't exist yet, ignore error
+      console.log('Updated_at column check completed');
+    }
+
     // Create categories table (if you want to manage them dynamically)
     await connection.query(`
       CREATE TABLE IF NOT EXISTS categories (
