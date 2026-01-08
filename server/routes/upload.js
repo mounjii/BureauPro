@@ -112,11 +112,29 @@ router.post('/single', (req, res, next) => {
   console.log('Content-Type:', req.headers['content-type']);
   console.log('Method:', req.method);
   console.log('URL:', req.url);
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  
+  // Check if Cloudinary is configured
+  if (!cloudName || !apiKey || !apiSecret) {
+    console.error('❌ Cloudinary not configured!');
+    return res.status(500).json({ 
+      error: 'Cloudinary configuration missing. Please check server environment variables.' 
+    });
+  }
+  
+  // Check if storage is initialized
+  if (!storage) {
+    console.error('❌ CloudinaryStorage not initialized!');
+    return res.status(500).json({ 
+      error: 'Upload service not initialized. Please check server logs.' 
+    });
+  }
   
   upload.single('image')(req, res, (err) => {
     if (err) {
       console.error('❌ Multer upload error:', err);
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Error stack:', err.stack);
       return handleMulterError(err, req, res, next);
     }
     
@@ -133,20 +151,31 @@ router.post('/single', (req, res, next) => {
       console.log('📁 Mime type:', req.file.mimetype);
       console.log('📁 Cloudinary path:', req.file.path);
       console.log('📁 Cloudinary public_id:', req.file.public_id);
+      console.log('📁 Full req.file object:', JSON.stringify(req.file, null, 2));
 
-      // Cloudinary returns the URL in req.file.path
-      const imageUrl = req.file.path || req.file.secure_url;
+      // Cloudinary returns the URL in req.file.path or secure_url
+      const imageUrl = req.file.path || req.file.secure_url || req.file.url;
       if (!imageUrl) {
-        console.error('❌ No image URL in req.file:', req.file);
-        return res.status(500).json({ error: 'Upload succeeded but no URL returned' });
+        console.error('❌ No image URL in req.file');
+        console.error('req.file keys:', Object.keys(req.file));
+        console.error('Full req.file:', req.file);
+        return res.status(500).json({ 
+          error: 'Upload succeeded but no URL returned from Cloudinary',
+          details: 'Check server logs for more information'
+        });
       }
       
-      console.log('✅ Upload successful:', imageUrl);
+      console.log('✅ Upload successful, imageUrl:', imageUrl);
       res.json({ imageUrl });
     } catch (error) {
       console.error('❌ Upload processing error:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
-      res.status(500).json({ error: 'Erreur lors de l\'upload: ' + (error.message || 'Unknown error') });
+      res.status(500).json({ 
+        error: 'Erreur lors de l\'upload: ' + (error.message || 'Unknown error'),
+        details: error.stack
+      });
     }
   });
 });
