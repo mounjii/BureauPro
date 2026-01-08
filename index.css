@@ -1,6 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-bp-white: #FFFFFF;
+  --color-bp-black: #1E1E1E;
+  --color-bp-dark: #1E1E1E;
+  --color-bp-medium: #6B6B6B;
+  --color-bp-light: #E5E5E5;
+  --color-bp-green: #CADF44;
+  --color-bp-bg: #F4F4F4;
+  
+  --font-family-sans: 'Inter', sans-serif;
+  --font-family-serif: 'Fraunces', serif;
+  
+  --breakpoint-3xl: 1800px;
+}
 
 body {
   font-family: 'Inter', 'sans-serif';
