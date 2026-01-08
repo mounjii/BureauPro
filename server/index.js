@@ -43,6 +43,11 @@ app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// API root (some clients ping /api)
+app.get('/api', (req, res) => {
+  res.json({ status: 'OK', message: 'BureauPro API root', endpoints: ['/api/health', '/api/users', '/api/products', '/api/categories', '/api/upload'] });
+});
+
 // Health check with database test
 app.get('/api/health', async (req, res) => {
   const health = {
