@@ -47,21 +47,19 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql:
   
   let dbConfig;
   
-  // Debug: Log available MySQL-related environment variables
-  console.log('🔍 Checking MySQL connection variables...');
-  console.log('MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? '✅ Found' : '❌ Not found');
-  if (process.env.MYSQL_PUBLIC_URL) {
-    console.log('MYSQL_PUBLIC_URL value:', process.env.MYSQL_PUBLIC_URL.replace(/:[^:@]+@/, ':****@'));
+  // Check MySQL connection variables (only log what's actually being used)
+  if (process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL) {
+    const mysqlUrl = process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL;
+    console.log('✅ Using MySQL connection URL');
+    console.log('Connection URL:', mysqlUrl.replace(/:[^:@]+@/, ':****@')); // Mask password in logs
+  } else {
+    // Only show individual parameters if URL is not available (for debugging)
+    console.log('⚠️ Using individual MySQL connection parameters');
+    console.log('MYSQLHOST:', process.env.MYSQLHOST || 'Not set');
+    console.log('MYSQLUSER:', process.env.MYSQLUSER || 'Not set');
+    console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE || 'Not set');
+    console.log('MYSQLPORT:', process.env.MYSQLPORT || 'Not set');
   }
-  console.log('MYSQL_URL:', process.env.MYSQL_URL ? '✅ Found' : '❌ Not found');
-  if (process.env.MYSQL_URL) {
-    console.log('MYSQL_URL value:', process.env.MYSQL_URL.replace(/:[^:@]+@/, ':****@'));
-  }
-  console.log('MYSQLHOST:', process.env.MYSQLHOST || 'Not set');
-  console.log('MYSQLUSER:', process.env.MYSQLUSER || 'Not set');
-  console.log('MYSQLPASSWORD:', process.env.MYSQLPASSWORD ? '✅ Set (hidden)' : 'Not set');
-  console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE || 'Not set');
-  console.log('MYSQLPORT:', process.env.MYSQLPORT || 'Not set');
   
   // Debug: Show if variables are literally "${{MySQL.MYSQL_PUBLIC_URL}}"
   if (process.env.MYSQL_PUBLIC_URL && process.env.MYSQL_PUBLIC_URL.includes('${{')) {
@@ -72,8 +70,6 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql:
   // Check if MySQL connection URL is provided (mysql://user:password@host:port/database)
   if (process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL) {
     const mysqlUrl = process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL;
-    console.log('✅ Using MySQL connection URL');
-    console.log('Connection URL:', mysqlUrl.replace(/:[^:@]+@/, ':****@')); // Mask password in logs
     pool = mysql.createPool(mysqlUrl);
   } else {
     // Use individual connection parameters

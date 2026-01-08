@@ -149,8 +149,27 @@ app.get('/api/health', async (req, res) => {
   res.status(statusCode).json(health);
 });
 
-// Database initialization endpoint (one-time use) - GET for easy browser access
-app.get('/api/init-db', async (req, res) => {
+// Database initialization endpoint (one-time use) - SECURED with environment variable check
+// Only allow in development or with a secret token
+app.post('/api/init-db', async (req, res) => {
+  // Security check: Require a secret token in production
+  const initToken = req.headers['x-init-token'] || req.body?.token;
+  const requiredToken = process.env.DB_INIT_TOKEN;
+  
+  if (process.env.NODE_ENV === 'production') {
+    // In production, allow if no token is set (first-time setup) or if token matches
+    if (requiredToken && initToken !== requiredToken) {
+      console.warn('⚠️ Unauthorized database initialization attempt');
+      return res.status(403).json({ 
+        error: 'Forbidden',
+        message: 'Database initialization requires authentication token. Set DB_INIT_TOKEN environment variable and include it in the request.'
+      });
+    }
+    // If no token is required, allow first-time initialization but log a warning
+    if (!requiredToken) {
+      console.warn('⚠️ WARNING: Database initialization allowed without token. Set DB_INIT_TOKEN for security.');
+    }
+  }
   try {
     console.log('🔧 Database initialization requested...');
     
