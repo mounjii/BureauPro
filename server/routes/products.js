@@ -123,8 +123,15 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Ensure req.body exists
+    if (!req.body) {
+      return res.status(400).json({ error: 'Request body is required' });
+    }
+    
     // Remove id from updates if present (we use URL parameter)
-    const { id: _, ...updates } = req.body;
+    const updates = { ...req.body };
+    delete updates.id;
 
     // Get existing product first
     const [existingProducts] = await pool.query(
@@ -187,27 +194,58 @@ router.put('/:id', async (req, res) => {
     const available = updates.available !== undefined ? Boolean(updates.available) : (existingProduct.available !== null && existingProduct.available !== undefined ? Boolean(existingProduct.available) : true);
 
     // Validate merged values
-    if (!name || !description || price === undefined || !category || !imageUrl) {
-      return res.status(400).json({ error: 'Missing required fields: name, description, price, category, and imageUrl are required' });
+    if (!name || !description || price === undefined || price === null || !category || !imageUrl) {
+      console.error('Validation failed:', { name, description, price, category, imageUrl });
+      return res.status(400).json({ 
+        error: 'Missing required fields', 
+        details: { name: !!name, description: !!description, price: price !== undefined && price !== null, category: !!category, imageUrl: !!imageUrl }
+      });
     }
+
+    // Ensure price is a valid number
+    const priceNum = parseFloat(price);
+    if (isNaN(priceNum)) {
+      return res.status(400).json({ error: 'Price must be a valid number', received: price });
+    }
+
+    // Prepare values for SQL query - ensure all types are correct
+    const updateValues = [
+      String(name || '').trim(),
+      String(description || '').trim(),
+      Number(priceNum),
+      String(category || '').trim(),
+      String(imageUrl || '').trim(),
+      JSON.stringify(imagesArray || []),
+      JSON.stringify(featuresArray || []),
+      Number(parseInt(stock) || 0),
+      Number(available ? 1 : 0), // Convert boolean to 0/1 for MySQL
+      Number(parseInt(id))
+    ];
+
+    // Validate all values before query
+    if (updateValues.some(v => v === null || v === undefined)) {
+      console.error('❌ Null/undefined value in updateValues:', updateValues);
+      return res.status(500).json({ error: 'Invalid data format', details: 'One or more values are null or undefined' });
+    }
+
+    console.log('✅ Updating product:', { 
+      id, 
+      name: String(name).substring(0, 50),
+      price: priceNum,
+      category,
+      hasImageUrl: !!imageUrl,
+      imagesCount: imagesArray.length,
+      featuresCount: featuresArray.length,
+      stock,
+      available
+    });
 
     await pool.query(
       `UPDATE products 
        SET name = ?, description = ?, price = ?, category = ?, image_url = ?, 
            images = ?, features = ?, stock = ?, available = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [
-        name,
-        description,
-        parseFloat(price),
-        category,
-        imageUrl,
-        JSON.stringify(imagesArray),
-        JSON.stringify(featuresArray),
-        stock,
-        available,
-        id
-      ]
+      updateValues
     );
 
     // Get updated product
@@ -254,13 +292,16 @@ router.put('/:id', async (req, res) => {
 
     res.json(formattedProduct);
   } catch (error) {
-    console.error('Update product error:', error);
+    console.error('❌ Update product error:', error);
     console.error('Error name:', error.name);
     console.error('Error message:', error.message);
     console.error('Error code:', error.code);
+    console.error('Error sqlState:', error.sqlState);
+    console.error('Error sqlMessage:', error.sqlMessage);
     console.error('Error stack:', error.stack);
     console.error('Request body:', JSON.stringify(req.body, null, 2));
     console.error('Product ID:', req.params.id);
+    console.error('Request params:', req.params);
     
     // Check for database connection errors
     if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.message?.includes('getaddrinfo')) {
@@ -271,10 +312,22 @@ router.put('/:id', async (req, res) => {
       });
     }
     
+    // Check for SQL errors
+    if (error.code === 'ER_BAD_FIELD_ERROR' || error.code === 'ER_NO_SUCH_TABLE' || error.sqlState) {
+      return res.status(500).json({ 
+        error: 'Database error',
+        message: error.sqlMessage || error.message,
+        code: error.code,
+        sqlState: error.sqlState
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Internal server error',
       message: error.message,
       code: error.code,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
       details: process.env.NODE_ENV !== 'production' ? error.stack : 'Check server logs for details'
     });
   }
