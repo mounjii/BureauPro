@@ -42,19 +42,48 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql:
     return [result.rows, []];
   };
 } else {
-  // MySQL (Development - Local)
+  // MySQL (Development - Local or Railway)
   const mysql = await import('mysql2/promise');
-  const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'Mounjikouki12',
-    database: process.env.DB_NAME || 'bureaupro_db',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-  };
-
-  pool = mysql.createPool(dbConfig);
+  
+  let dbConfig;
+  
+  // Debug: Log available MySQL-related environment variables
+  console.log('🔍 Checking MySQL connection variables...');
+  console.log('MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? '✅ Found' : '❌ Not found');
+  console.log('MYSQL_URL:', process.env.MYSQL_URL ? '✅ Found' : '❌ Not found');
+  console.log('MYSQLHOST:', process.env.MYSQLHOST || 'Not set');
+  console.log('MYSQLUSER:', process.env.MYSQLUSER || 'Not set');
+  console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE || 'Not set');
+  
+  // Check if Railway MySQL URL is provided (mysql://user:password@host:port/database)
+  if (process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL) {
+    const mysqlUrl = process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL;
+    console.log('✅ Using MySQL connection URL from Railway');
+    console.log('Connection URL:', mysqlUrl.replace(/:[^:@]+@/, ':****@')); // Mask password in logs
+    pool = mysql.createPool(mysqlUrl);
+  } else {
+    // Use individual connection parameters
+    console.log('⚠️ Using individual MySQL connection parameters');
+    dbConfig = {
+      host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+      user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+      password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || process.env.MYSQL_ROOT_PASSWORD || 'Mounjikouki12',
+      database: process.env.DB_NAME || process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE || 'bureaupro_db',
+      port: process.env.DB_PORT || process.env.MYSQLPORT || 3306,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0
+    };
+    
+    console.log('MySQL connection config:', {
+      host: dbConfig.host,
+      user: dbConfig.user,
+      database: dbConfig.database,
+      port: dbConfig.port
+    });
+    
+    pool = mysql.createPool(dbConfig);
+  }
 
   // Test MySQL connection
   pool.getConnection()
