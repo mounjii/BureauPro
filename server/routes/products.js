@@ -123,16 +123,72 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, category, imageUrl, images, features, stock, available } = req.body;
+    // Remove id from updates if present (we use URL parameter)
+    const { id: _, ...updates } = req.body;
 
-    // Check if product exists
+    // Get existing product first
     const [existingProducts] = await pool.query(
-      'SELECT id FROM products WHERE id = ?',
+      'SELECT * FROM products WHERE id = ?',
       [id]
     );
 
     if (existingProducts.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const existingProduct = existingProducts[0];
+
+    // Merge updates with existing product (frontend sends full product object)
+    const name = updates.name !== undefined ? updates.name : existingProduct.name;
+    const description = updates.description !== undefined ? updates.description : existingProduct.description;
+    const price = updates.price !== undefined ? updates.price : existingProduct.price;
+    const category = updates.category !== undefined ? updates.category : existingProduct.category;
+    const imageUrl = updates.imageUrl !== undefined ? updates.imageUrl : existingProduct.image_url;
+    
+    // Handle images - can be array or string
+    let imagesArray = [];
+    if (updates.images !== undefined) {
+      if (Array.isArray(updates.images)) {
+        imagesArray = updates.images;
+      } else if (typeof updates.images === 'string') {
+        try {
+          imagesArray = JSON.parse(updates.images);
+        } catch {
+          imagesArray = updates.images.split(',').map(url => url.trim()).filter(Boolean);
+        }
+      }
+    } else {
+      // Parse existing images
+      try {
+        imagesArray = existingProduct.images ? (typeof existingProduct.images === 'string' ? JSON.parse(existingProduct.images) : existingProduct.images) : [];
+      } catch {
+        imagesArray = [];
+      }
+    }
+
+    // Handle features - can be array or string
+    let featuresArray = [];
+    if (updates.features !== undefined) {
+      if (Array.isArray(updates.features)) {
+        featuresArray = updates.features;
+      } else if (typeof updates.features === 'string') {
+        featuresArray = updates.features.split(',').map(f => f.trim()).filter(Boolean);
+      }
+    } else {
+      // Parse existing features
+      try {
+        featuresArray = existingProduct.features ? (typeof existingProduct.features === 'string' ? JSON.parse(existingProduct.features) : existingProduct.features) : [];
+      } catch {
+        featuresArray = [];
+      }
+    }
+
+    const stock = updates.stock !== undefined ? (parseInt(updates.stock) || 0) : (existingProduct.stock || 0);
+    const available = updates.available !== undefined ? Boolean(updates.available) : (existingProduct.available !== null && existingProduct.available !== undefined ? Boolean(existingProduct.available) : true);
+
+    // Validate merged values
+    if (!name || !description || price === undefined || !category || !imageUrl) {
+      return res.status(400).json({ error: 'Missing required fields: name, description, price, category, and imageUrl are required' });
     }
 
     await pool.query(
@@ -143,13 +199,13 @@ router.put('/:id', async (req, res) => {
       [
         name,
         description,
-        price,
+        parseFloat(price),
         category,
         imageUrl,
-        JSON.stringify(images || []),
-        JSON.stringify(features || []),
-        stock || 0,
-        available !== undefined ? available : true,
+        JSON.stringify(imagesArray),
+        JSON.stringify(featuresArray),
+        stock,
+        available,
         id
       ]
     );
@@ -160,7 +216,29 @@ router.put('/:id', async (req, res) => {
       [id]
     );
 
+    if (products.length === 0) {
+      return res.status(404).json({ error: 'Product not found after update' });
+    }
+
     const product = products[0];
+    
+    // Safely parse JSON fields
+    let parsedImages = [];
+    let parsedFeatures = [];
+    try {
+      parsedImages = product.images ? (typeof product.images === 'string' ? JSON.parse(product.images) : product.images) : [];
+    } catch (e) {
+      console.warn('Error parsing images JSON:', e);
+      parsedImages = [];
+    }
+    
+    try {
+      parsedFeatures = product.features ? (typeof product.features === 'string' ? JSON.parse(product.features) : product.features) : [];
+    } catch (e) {
+      console.warn('Error parsing features JSON:', e);
+      parsedFeatures = [];
+    }
+
     const formattedProduct = {
       id: product.id.toString(),
       name: product.name,
@@ -168,8 +246,8 @@ router.put('/:id', async (req, res) => {
       price: parseFloat(product.price),
       category: product.category,
       imageUrl: product.image_url,
-      images: JSON.parse(product.images || '[]'),
-      features: JSON.parse(product.features || '[]'),
+      images: parsedImages,
+      features: parsedFeatures,
       stock: product.stock,
       available: product.available !== null && product.available !== undefined ? Boolean(product.available) : true
     };
@@ -177,7 +255,28 @@ router.put('/:id', async (req, res) => {
     res.json(formattedProduct);
   } catch (error) {
     console.error('Update product error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
+    console.error('Product ID:', req.params.id);
+    
+    // Check for database connection errors
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.message?.includes('getaddrinfo')) {
+      return res.status(503).json({ 
+        error: 'Database connection failed',
+        message: 'Unable to connect to database. Please check database configuration.',
+        details: 'Check Railway logs and ensure MYSQL_PUBLIC_URL is set correctly.'
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message,
+      code: error.code,
+      details: process.env.NODE_ENV !== 'production' ? error.stack : 'Check server logs for details'
+    });
   }
 });
 
