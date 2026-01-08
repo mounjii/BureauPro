@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: '.env.local' });
 } else {
-  dotenv.config(); // Use Railway/environment variables in production
+  dotenv.config(); // Use environment variables in production
 }
 
 let pool;
@@ -42,7 +42,7 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql:
     return [result.rows, []];
   };
 } else {
-  // MySQL (Development - Local or Railway)
+  // MySQL (Development - Local or Production)
   const mysql = await import('mysql2/promise');
   
   let dbConfig;
@@ -66,13 +66,13 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql:
   // Debug: Show if variables are literally "${{MySQL.MYSQL_PUBLIC_URL}}"
   if (process.env.MYSQL_PUBLIC_URL && process.env.MYSQL_PUBLIC_URL.includes('${{')) {
     console.log('⚠️ WARNING: MYSQL_PUBLIC_URL contains unresolved variable reference:', process.env.MYSQL_PUBLIC_URL);
-    console.log('   This means Railway did not resolve the variable reference. Check service name and syntax.');
+    console.log('   This means the deployment platform did not resolve the variable reference. Check service name and syntax.');
   }
   
-  // Check if Railway MySQL URL is provided (mysql://user:password@host:port/database)
+  // Check if MySQL connection URL is provided (mysql://user:password@host:port/database)
   if (process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL) {
     const mysqlUrl = process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL;
-    console.log('✅ Using MySQL connection URL from Railway');
+    console.log('✅ Using MySQL connection URL');
     console.log('Connection URL:', mysqlUrl.replace(/:[^:@]+@/, ':****@')); // Mask password in logs
     pool = mysql.createPool(mysqlUrl);
   } else {

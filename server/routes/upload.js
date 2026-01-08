@@ -8,7 +8,7 @@ import dotenv from 'dotenv';
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: '.env.local' });
 } else {
-  dotenv.config(); // Use Railway/environment variables in production
+  dotenv.config(); // Use environment variables in production
 }
 
 const router = express.Router();
@@ -129,7 +129,7 @@ router.post('/single', (req, res, next) => {
     console.error('  CLOUDINARY_API_SECRET:', apiSecret ? 'Set' : 'Missing');
     return res.status(500).json({ 
       error: 'Cloudinary configuration missing. Please check server environment variables.',
-      details: 'Ensure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are set in Railway environment variables.'
+      details: 'Ensure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are set in environment variables.'
     });
   }
   
@@ -153,7 +153,7 @@ router.post('/single', (req, res, next) => {
       if (err.message && err.message.includes('cloudinary')) {
         return res.status(500).json({ 
           error: 'Cloudinary upload failed',
-          details: 'Please check Cloudinary configuration and credentials in Railway environment variables.',
+          details: 'Please check Cloudinary configuration and credentials in environment variables.',
           message: err.message
         });
       }

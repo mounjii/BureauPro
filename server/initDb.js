@@ -6,7 +6,7 @@ import bcrypt from 'bcrypt';
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: '.env.local' });
 } else {
-  dotenv.config(); // Use Railway/environment variables in production
+  dotenv.config(); // Use environment variables in production
 }
 
 async function initDatabase() {
@@ -14,15 +14,15 @@ async function initDatabase() {
   let dbName;
   
   try {
-    // Check if Railway MySQL URL is provided
+    // Check if MySQL connection URL is provided
     if (process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL) {
       const mysqlUrl = process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL;
-      console.log('Using MySQL connection URL from Railway');
+      console.log('Using MySQL connection URL');
       // Parse URL to get database name
       const urlParts = new URL(mysqlUrl);
       dbName = urlParts.pathname.substring(1); // Remove leading '/'
       
-      // Connect with database specified (Railway MySQL already has database in URL)
+      // Connect with database specified (connection URL already has database in URL)
       connection = await mysql.createConnection(mysqlUrl);
       console.log(`Connected to MySQL server (database: ${dbName})`);
       

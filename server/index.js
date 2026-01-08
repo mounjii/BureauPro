@@ -17,13 +17,13 @@ const __dirname = path.dirname(__filename);
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config({ path: '.env.local' });
 } else {
-  dotenv.config(); // Use Railway/environment variables in production
+  dotenv.config(); // Use environment variables in production
 }
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Trust proxy for Railway (handles HTTPS properly)
+// Trust proxy for production deployments (handles HTTPS properly)
 app.set('trust proxy', 1);
 
 // Log startup configuration
@@ -35,7 +35,7 @@ console.log('     MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? '✅ Set' :
 console.log('     CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Not set');
 
 // Middleware
-// CORS configuration for Railway deployment
+// CORS configuration for production deployment
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -43,7 +43,7 @@ app.use(cors({
     
     // In production, only allow HTTPS origins
     if (process.env.NODE_ENV === 'production') {
-      // Allow all HTTPS origins in production (Railway handles domain)
+      // Allow all HTTPS origins in production
       if (origin.startsWith('https://')) {
         return callback(null, true);
       }
@@ -275,7 +275,7 @@ app.use((err, req, res, next) => {
 });
 
 // Serve frontend static files (after API routes)
-// Try multiple possible paths for dist folder (Railway might use different working directory)
+// Try multiple possible paths for dist folder (different deployment environments may use different working directories)
 const possibleDistPaths = [
   path.join(__dirname, '..', 'dist'),  // Standard: server/../dist
   path.join(process.cwd(), 'dist'),     // Current working directory
