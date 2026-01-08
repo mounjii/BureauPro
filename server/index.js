@@ -9,6 +9,7 @@ import productRoutes from './routes/products.js';
 import categoryRoutes from './routes/categories.js';
 import uploadRoutes from './routes/upload.js';
 import pool from './db.js';
+import initDatabase from './initDb.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -90,6 +91,29 @@ app.use('/api/upload', uploadRoutes);
 // API root (some clients ping /api)
 app.get('/api', (req, res) => {
   res.json({ status: 'OK', message: 'BureauPro API root', endpoints: ['/api/health', '/api/users', '/api/products', '/api/categories', '/api/upload'] });
+});
+
+// Database initialization endpoint (one-time use)
+app.post('/api/init-db', async (req, res) => {
+  try {
+    console.log('🔄 Database initialization requested');
+    await initDatabase();
+    res.json({ 
+      status: 'success', 
+      message: 'Database initialized successfully',
+      admin: {
+        email: 'admin@bureaupro.com',
+        password: 'admin123'
+      }
+    });
+  } catch (error) {
+    console.error('❌ Database initialization error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Database initialization failed',
+      error: error.message 
+    });
+  }
 });
 
 // Health check with database test
@@ -334,11 +358,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static assets with proper MIME types
+// Serve static assets with proper MIME types and CORS headers
 // This middleware will serve files from dist/ and call next() if file not found
 // Exclude index.html so our custom route can handle it with asset path fixing
 app.use(express.static(distPath, {
-  setHeaders: (res, filePath) => {
+  setHeaders: (res, filePath, stat) => {
     // Set proper MIME types for different file extensions
     if (filePath.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
@@ -348,6 +372,16 @@ app.use(express.static(distPath, {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
     } else if (filePath.endsWith('.svg')) {
       res.setHeader('Content-Type', 'image/svg+xml');
+    }
+    
+    // Ensure CORS headers for static assets (needed if crossorigin attribute is used)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    // Cache control for assets
+    if (filePath.match(/\.(js|css)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   },
   // Don't serve index.html - let our custom route handle it
@@ -387,12 +421,17 @@ const fixHtmlAssetPaths = (htmlContent, distPath) => {
         }
         
         // Replace CSS file references (in href attributes)
-        const cssPattern = /href=["']\/assets\/index-[A-Za-z0-9_-]+\.css["']/g;
-        const cssReplacement = `href="/assets/${cssFile}"`;
-        if (fixedHtml.match(cssPattern)) {
-          fixedHtml = fixedHtml.replace(cssPattern, cssReplacement);
+        // Also remove crossorigin attribute from CSS links (not needed for same-origin and can cause issues)
+        const cssPattern = /<link[^>]*href=["']\/assets\/index-[A-Za-z0-9_-]+\.css["'][^>]*>/g;
+        fixedHtml = fixedHtml.replace(cssPattern, (match) => {
+          // Remove crossorigin attribute if present
+          const withoutCrossorigin = match.replace(/\s+crossorigin=["'][^"']*["']/g, '');
+          // Replace the href with the correct filename
+          return withoutCrossorigin.replace(/href=["']\/assets\/index-[A-Za-z0-9_-]+\.css["']/, `href="/assets/${cssFile}"`);
+        });
+        if (fixedHtml !== htmlContent) {
           changed = true;
-          console.log(`✅ Replaced CSS reference with: ${cssFile}`);
+          console.log(`✅ Replaced CSS reference with: ${cssFile} (removed crossorigin if present)`);
         }
         
         if (changed) {
