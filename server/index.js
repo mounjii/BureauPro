@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import userRoutes from './routes/users.js';
 import productRoutes from './routes/products.js';
@@ -275,9 +276,39 @@ app.use((err, req, res, next) => {
 
 // Serve frontend static files (after API routes)
 const distPath = path.join(__dirname, '..', 'dist');
-app.use(express.static(distPath));
+console.log('📁 Static files directory:', distPath);
 
-// Serve frontend index.html for all non-API routes (client-side routing)
+// Check if dist directory exists
+if (fs.existsSync(distPath)) {
+  console.log('✅ Dist directory exists');
+  const files = fs.readdirSync(distPath);
+  console.log('📦 Dist directory contents:', files);
+  if (fs.existsSync(path.join(distPath, 'assets'))) {
+    const assets = fs.readdirSync(path.join(distPath, 'assets'));
+    console.log('📦 Assets directory contents:', assets);
+  }
+} else {
+  console.error('❌ Dist directory does not exist!');
+  console.error('   Run "npm run build" to create the dist folder');
+}
+
+// Serve static assets with proper MIME types
+app.use(express.static(distPath, {
+  setHeaders: (res, filePath) => {
+    // Set proper MIME types for different file extensions
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    } else if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    } else if (filePath.endsWith('.json')) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    } else if (filePath.endsWith('.svg')) {
+      res.setHeader('Content-Type', 'image/svg+xml');
+    }
+  }
+}));
+
+// Serve frontend index.html for all non-API and non-asset routes (client-side routing)
 app.get('*', (req, res) => {
   // Don't serve frontend for API routes
   if (req.path.startsWith('/api')) {
@@ -287,7 +318,20 @@ app.get('*', (req, res) => {
       path: req.path
     });
   }
-  // Serve frontend for all other routes
+  
+  // Don't serve index.html for static asset requests
+  // These should be handled by express.static above
+  if (req.path.startsWith('/assets/') || 
+      req.path.startsWith('/images/') || 
+      req.path.match(/\.(js|css|json|svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot)$/)) {
+    return res.status(404).json({
+      success: false,
+      error: 'Static file not found',
+      path: req.path
+    });
+  }
+  
+  // Serve frontend for all other routes (React Router)
   res.sendFile(path.join(distPath, 'index.html'));
 });
 

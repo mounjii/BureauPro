@@ -2,7 +2,18 @@
 
 ## Issues Fixed
 
-### 1. Tailwind CDN Warning
+### 1. Static Files MIME Type Error (NEW)
+**Issue**: JavaScript and CSS files being served with `text/html` MIME type instead of proper types, causing "Failed to load module script" errors.
+
+**Fixes Applied**:
+- Added explicit MIME type headers for static files (JS, CSS, JSON, SVG)
+- Excluded static asset paths (`/assets/`, `/images/`, file extensions) from catch-all route
+- Added logging to verify dist directory exists and contains files
+- Ensured `express.static()` serves files with correct Content-Type headers
+
+**Important**: Make sure to run `npm run build` before deploying to Railway so the `dist` folder exists with all assets.
+
+### 2. Tailwind CDN Warning
 **Issue**: Warning about `cdn.tailwindcss.com` not being used in production.
 
 **Fix**: 
@@ -45,14 +56,23 @@ CLOUDINARY_API_SECRET=your_api_secret
 
 ## Next Steps
 
-1. **Rebuild the frontend**:
+1. **Rebuild the frontend locally** (optional, for testing):
    ```bash
    npm run build
    ```
 
-2. **Redeploy to Railway**:
+2. **Configure Railway Build Command**:
+   - Go to Railway project → Settings → Build & Deploy
+   - Ensure the build command includes: `npm run build`
+   - Railway should run: `npm install && npm run build`
+   - The `dist` folder must be created during the build process
+
+3. **Redeploy to Railway**:
    - Push your changes to GitHub
    - Railway will automatically rebuild and redeploy
+   - Check Railway logs to verify:
+     - ✅ Dist directory exists
+     - ✅ Assets directory contents are listed
 
 3. **Verify Cloudinary credentials**:
    - Check Railway dashboard → Variables tab
@@ -74,7 +94,19 @@ After deployment, test:
 
 ## Troubleshooting
 
-If upload still fails:
+### If static files still show MIME type errors:
+1. **Check Railway build logs** - Verify `npm run build` ran successfully
+2. **Check Railway server logs** - Look for:
+   - "✅ Dist directory exists"
+   - "📦 Assets directory contents" (should list JS/CSS files)
+3. **Verify dist folder structure** - Should have:
+   - `dist/index.html`
+   - `dist/assets/index-*.js`
+   - `dist/assets/index-*.css`
+4. **Check Railway build command** - Must include `npm run build`
+5. **Verify file paths** - Check browser Network tab to see actual file paths being requested
+
+### If upload still fails:
 1. Check Railway logs for Cloudinary configuration status
 2. Verify Cloudinary credentials are correct
 3. Check file size (limit is 5MB)
