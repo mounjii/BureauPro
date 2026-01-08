@@ -1,5 +1,6 @@
 import React from 'react';
 import { Product } from '../types';
+import { normalizeImageUrl } from '../utils/imageUtils';
 
 interface ProductCardProps {
   product: Product;
@@ -24,7 +25,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
         product.available === false ? 'opacity-50' : ''
       }`}>
         <img 
-          src={product.imageUrl} 
+          src={normalizeImageUrl(product.imageUrl)} 
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />

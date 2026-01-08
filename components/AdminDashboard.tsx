@@ -5,6 +5,7 @@ import { productService, categoryService, uploadService, Category } from '../ser
 import { authService } from '../services/apiService';
 import BurocycleLogo from './BurocycleLogo';
 import AlertContainer, { AlertData } from './AlertContainer';
+import { normalizeImageUrl } from '../utils/imageUtils';
 
 interface AdminDashboardProps {
   onProductClick: (product: Product) => void;
@@ -749,7 +750,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
                     {filteredProducts.map((p) => (
                       <div key={p.id} className="bg-white p-4 sm:p-5 rounded-xl border border-bp-light/40 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group relative overflow-hidden">
                         <div className="aspect-square rounded-xl overflow-hidden mb-3 sm:mb-4 bg-gray-100 relative">
-                          <img src={p.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="" />
+                          <img src={normalizeImageUrl(p.imageUrl)} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="" />
                           <div className="absolute top-2 right-2">
                             <span className={`px-2 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider shadow-sm ${
                               p.available ? 'bg-bp-green/20 text-bp-black' : 'bg-red-100 text-red-700'

@@ -38,26 +38,31 @@ cloudinary.v2.config({
 
 // Configure multer with Cloudinary storage
 let storage;
-try {
-  storage = new CloudinaryStorage({
-    cloudinary: cloudinary.v2,
-    params: async (req, file) => {
-      console.log('📁 Preparing upload to folder: test.bureaupro');
-      return {
-        folder: 'test.bureaupro', // Folder in Cloudinary
-        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-        transformation: [
-          { width: 1200, height: 1200, crop: 'limit' }, // Max size
-          { quality: 'auto' }, // Auto optimize quality
-          { fetch_format: 'auto' } // Auto format (webp when possible)
-        ],
-      };
-    },
-  });
-  console.log('✅ CloudinaryStorage configured successfully');
-} catch (error) {
-  console.error('❌ Error creating CloudinaryStorage:', error);
-  throw error;
+if (cloudName && apiKey && apiSecret) {
+  try {
+    storage = new CloudinaryStorage({
+      cloudinary: cloudinary.v2,
+      params: async (req, file) => {
+        console.log('📁 Preparing upload to folder: test.bureaupro');
+        return {
+          folder: 'test.bureaupro', // Folder in Cloudinary
+          allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+          transformation: [
+            { width: 1200, height: 1200, crop: 'limit' }, // Max size
+            { quality: 'auto' }, // Auto optimize quality
+            { fetch_format: 'auto' } // Auto format (webp when possible)
+          ],
+        };
+      },
+    });
+    console.log('✅ CloudinaryStorage configured successfully');
+  } catch (error) {
+    console.error('❌ Error creating CloudinaryStorage:', error);
+    console.error('   This will prevent file uploads from working.');
+    // Don't throw - let the route handle the error when upload is attempted
+  }
+} else {
+  console.warn('⚠️ CloudinaryStorage not initialized - Cloudinary credentials missing');
 }
 
 // File filter - only images

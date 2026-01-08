@@ -5,6 +5,7 @@ import ProductCard from './components/ProductCard';
 import BurocycleLogo from './components/BurocycleLogo';
 import { productService, categoryService, Category, authService } from './services/apiService';
 import AlertContainer, { AlertData } from './components/AlertContainer';
+import { normalizeImageUrl, normalizeImageUrls } from './utils/imageUtils';
 
 type View = 'catalogue';
 
@@ -377,7 +378,8 @@ const App: React.FC = () => {
                   const allImages = selectedProduct.imageUrl 
                     ? [selectedProduct.imageUrl, ...(selectedProduct.images || [])]
                     : (selectedProduct.images || []);
-                  const currentImage = allImages[activeImageIndex] || selectedProduct.imageUrl;
+                  const normalizedImages = normalizeImageUrls(allImages);
+                  const currentImage = normalizedImages[activeImageIndex] || normalizeImageUrl(selectedProduct.imageUrl);
                   
                   return (
                     <>
@@ -408,10 +410,11 @@ const App: React.FC = () => {
                 const allImages = selectedProduct.imageUrl 
                   ? [selectedProduct.imageUrl, ...(selectedProduct.images || [])]
                   : (selectedProduct.images || []);
+                const normalizedImages = normalizeImageUrls(allImages);
                 
-                return allImages.length > 1 && (
+                return normalizedImages.length > 1 && (
                   <div className="h-20 sm:h-24 flex items-center justify-center gap-2 sm:gap-3 border-t border-bp-light/10 bg-white px-2 overflow-x-auto">
-                    {allImages.map((img, idx) => (
+                    {normalizedImages.map((img, idx) => (
                       <button 
                         key={idx}
                         onClick={() => setActiveImageIndex(idx)}
@@ -486,7 +489,8 @@ const App: React.FC = () => {
             const allImages = selectedProduct.imageUrl 
               ? [selectedProduct.imageUrl, ...(selectedProduct.images || [])]
               : (selectedProduct.images || []);
-            const currentImage = allImages[activeImageIndex] || selectedProduct.imageUrl;
+            const normalizedImages = normalizeImageUrls(allImages);
+            const currentImage = normalizedImages[activeImageIndex] || normalizeImageUrl(selectedProduct.imageUrl);
             
             return (
               <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
