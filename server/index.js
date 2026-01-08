@@ -68,9 +68,11 @@ app.get('/api/health', async (req, res) => {
   res.status(statusCode).json(health);
 });
 
-// Database initialization endpoint (one-time use)
-app.post('/api/init-db', async (req, res) => {
+// Database initialization endpoint (one-time use) - GET for easy browser access
+app.get('/api/init-db', async (req, res) => {
   try {
+    console.log('🔧 Database initialization requested...');
+    
     // Check if database is already initialized by checking if users table exists
     try {
       const [tables] = await pool.query(`
@@ -84,6 +86,7 @@ app.post('/api/init-db', async (req, res) => {
         const [users] = await pool.query('SELECT id FROM users WHERE email = ?', ['simo@bureaupro.com']);
         
         if (users.length > 0) {
+          console.log('✅ Database already initialized');
           return res.json({ 
             success: true, 
             message: 'Database already initialized',
@@ -93,23 +96,113 @@ app.post('/api/init-db', async (req, res) => {
       }
     } catch (checkError) {
       // Table doesn't exist, continue with initialization
-      console.log('Tables do not exist, initializing database...');
+      console.log('📋 Tables do not exist, initializing database...');
     }
 
-    // Import and run initDb
-    const { default: initDatabase } = await import('./initDb.js');
-    await initDatabase();
+    // Use pool connection directly for initialization
+    const connection = await pool.getConnection();
     
-    res.json({ 
-      success: true, 
-      message: 'Database initialized successfully',
-      alreadyInitialized: false 
-    });
+    try {
+      // Import bcrypt for password hashing
+      const bcrypt = (await import('bcrypt')).default;
+      
+      // Create users table
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          name VARCHAR(255) NOT NULL,
+          first_name VARCHAR(255),
+          last_name VARCHAR(255),
+          password VARCHAR(255) NOT NULL,
+          role ENUM('user', 'admin') DEFAULT 'user',
+          status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+          permissions TEXT,
+          liked_products TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Users table ready');
+
+      // Create categories table
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS categories (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) UNIQUE NOT NULL,
+          description TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Categories table ready');
+
+      // Create products table
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS products (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          description TEXT,
+          price DECIMAL(10, 2),
+          category VARCHAR(255),
+          image_url VARCHAR(500),
+          images TEXT,
+          features TEXT,
+          stock INT DEFAULT 0,
+          available BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (category) REFERENCES categories(name) ON DELETE SET NULL
+        )
+      `);
+      console.log('✅ Products table ready');
+
+      // Check if admin user exists
+      const [existingAdmins] = await connection.query('SELECT id FROM users WHERE email = ?', ['simo@bureaupro.com']);
+      
+      if (existingAdmins.length === 0) {
+        // Create admin user
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+        await connection.query(
+          `INSERT INTO users (email, name, password, role, status, permissions) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          ['simo@bureaupro.com', 'Admin', hashedPassword, 'admin', 'approved', 
+           JSON.stringify({ manageProducts: true, manageCategories: true, manageCollaborators: true, viewDashboard: true })]
+        );
+        console.log('✅ Admin user created');
+      }
+
+      // Insert default categories if they don't exist
+      const defaultCategories = [
+        { name: 'Bureaux', description: 'Bureaux de toutes tailles et styles' },
+        { name: 'Chaises', description: 'Chaises ergonomiques et confortables' },
+        { name: 'Étagères', description: 'Étagères et rangements' },
+        { name: 'Accessoires', description: 'Accessoires de bureau' }
+      ];
+
+      for (const category of defaultCategories) {
+        await connection.query(
+          'INSERT IGNORE INTO categories (name, description) VALUES (?, ?)',
+          [category.name, category.description]
+        );
+      }
+      console.log('✅ Default categories ready');
+
+      connection.release();
+      
+      console.log('✅ Database initialization completed successfully!');
+      res.json({ 
+        success: true, 
+        message: 'Database initialized successfully',
+        alreadyInitialized: false 
+      });
+    } catch (initError) {
+      connection.release();
+      throw initError;
+    }
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('❌ Database initialization error:', error);
     res.status(500).json({ 
       success: false, 
-      error: error.message 
+      error: error.message,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined
     });
   }
 });
