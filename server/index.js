@@ -41,17 +41,17 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // In production, allow Railway domain and HTTPS origins
+    // In production, only allow HTTPS origins
     if (process.env.NODE_ENV === 'production') {
       // Allow all HTTPS origins in production (Railway handles domain)
       if (origin.startsWith('https://')) {
         return callback(null, true);
       }
-      // Also allow Railway's internal network
-      return callback(null, true);
+      // Reject non-HTTPS origins in production for security
+      return callback(new Error('HTTPS required in production'), false);
     }
     
-    // In development, allow localhost
+    // In development, allow localhost and all origins for testing
     callback(null, true);
   },
   credentials: true,
