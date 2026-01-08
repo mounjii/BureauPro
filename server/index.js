@@ -22,6 +22,14 @@ if (process.env.NODE_ENV !== 'production') {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Log startup configuration
+console.log('🔧 Server startup configuration:');
+console.log('   PORT:', PORT);
+console.log('   NODE_ENV:', process.env.NODE_ENV || 'not set');
+console.log('   Database connection variables:');
+console.log('     MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? '✅ Set' : '❌ Not set');
+console.log('     CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? '✅ Set' : '❌ Not set');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -227,13 +235,34 @@ app.use((req, res) => {
 });
 
 // Start server with error handling
+console.log('🔄 Starting server...');
 try {
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server successfully started!`);
     console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
     console.log(`📡 API endpoints available at http://0.0.0.0:${PORT}/api`);
+    console.log(`🌐 Health check: http://0.0.0.0:${PORT}/api/health`);
+  });
+  
+  server.on('error', (error) => {
+    console.error('❌ Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+      console.error(`   Port ${PORT} is already in use!`);
+    }
+    process.exit(1);
+  });
+  
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('🛑 SIGTERM received, shutting down gracefully...');
+    server.close(() => {
+      console.log('✅ Server closed');
+      process.exit(0);
+    });
   });
 } catch (error) {
   console.error('❌ Failed to start server:', error);
+  console.error('   Error stack:', error.stack);
   process.exit(1);
 }
 
