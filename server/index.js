@@ -7,6 +7,7 @@ import userRoutes from './routes/users.js';
 import productRoutes from './routes/products.js';
 import categoryRoutes from './routes/categories.js';
 import uploadRoutes from './routes/upload.js';
+import pool from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,9 +35,37 @@ app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'BureauPro API is running' });
+// Health check with database test
+app.get('/api/health', async (req, res) => {
+  const health = {
+    status: 'OK',
+    message: 'BureauPro API is running',
+    timestamp: new Date().toISOString(),
+    database: 'unknown',
+    cloudinary: 'unknown'
+  };
+
+  // Test database connection
+  try {
+    await pool.query('SELECT 1');
+    health.database = 'connected';
+  } catch (error) {
+    health.database = `error: ${error.message}`;
+    health.status = 'DEGRADED';
+  }
+
+  // Check Cloudinary configuration
+  if (process.env.CLOUDINARY_CLOUD_NAME && 
+      process.env.CLOUDINARY_API_KEY && 
+      process.env.CLOUDINARY_API_SECRET) {
+    health.cloudinary = 'configured';
+  } else {
+    health.cloudinary = 'not configured';
+    health.status = 'DEGRADED';
+  }
+
+  const statusCode = health.status === 'OK' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 app.listen(PORT, () => {
