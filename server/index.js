@@ -336,6 +336,7 @@ app.use((req, res, next) => {
 
 // Serve static assets with proper MIME types
 // This middleware will serve files from dist/ and call next() if file not found
+// Exclude index.html so our custom route can handle it with asset path fixing
 app.use(express.static(distPath, {
   setHeaders: (res, filePath) => {
     // Set proper MIME types for different file extensions
@@ -348,7 +349,9 @@ app.use(express.static(distPath, {
     } else if (filePath.endsWith('.svg')) {
       res.setHeader('Content-Type', 'image/svg+xml');
     }
-  }
+  },
+  // Don't serve index.html - let our custom route handle it
+  index: false
 }));
 
 // Helper function to fix HTML with correct asset filenames
@@ -356,33 +359,63 @@ const fixHtmlAssetPaths = (htmlContent, distPath) => {
   try {
     // Read actual asset files from dist/assets
     const assetsPath = path.join(distPath, 'assets');
+    console.log('🔧 Fixing HTML asset paths, checking:', assetsPath);
+    
     if (fs.existsSync(assetsPath)) {
       const assetFiles = fs.readdirSync(assetsPath);
+      console.log('📦 Available asset files:', assetFiles);
+      
       const jsFile = assetFiles.find(f => f.endsWith('.js') && f.startsWith('index-'));
       const cssFile = assetFiles.find(f => f.endsWith('.css') && f.startsWith('index-'));
       
+      console.log('📄 Found JS file:', jsFile);
+      console.log('📄 Found CSS file:', cssFile);
+      
       if (jsFile && cssFile) {
         // Replace old hardcoded filenames with actual ones
+        // Match patterns like: src="/assets/index-XXX.js" or href="/assets/index-XXX.css"
         let fixedHtml = htmlContent;
-        // Replace any old JS file references
-        fixedHtml = fixedHtml.replace(/\/assets\/index-[A-Za-z0-9]+\.js/g, `/assets/${jsFile}`);
-        // Replace any old CSS file references
-        fixedHtml = fixedHtml.replace(/\/assets\/index-[A-Za-z0-9]+\.css/g, `/assets/${cssFile}`);
+        let changed = false;
         
-        if (fixedHtml !== htmlContent) {
-          console.log(`✅ Fixed HTML asset paths: ${jsFile}, ${cssFile}`);
-          return fixedHtml;
+        // Replace JS file references (in src attributes)
+        const jsPattern = /src=["']\/assets\/index-[A-Za-z0-9_-]+\.js["']/g;
+        const jsReplacement = `src="/assets/${jsFile}"`;
+        if (fixedHtml.match(jsPattern)) {
+          fixedHtml = fixedHtml.replace(jsPattern, jsReplacement);
+          changed = true;
+          console.log(`✅ Replaced JS reference with: ${jsFile}`);
         }
+        
+        // Replace CSS file references (in href attributes)
+        const cssPattern = /href=["']\/assets\/index-[A-Za-z0-9_-]+\.css["']/g;
+        const cssReplacement = `href="/assets/${cssFile}"`;
+        if (fixedHtml.match(cssPattern)) {
+          fixedHtml = fixedHtml.replace(cssPattern, cssReplacement);
+          changed = true;
+          console.log(`✅ Replaced CSS reference with: ${cssFile}`);
+        }
+        
+        if (changed) {
+          console.log(`✅ Fixed HTML asset paths: JS=${jsFile}, CSS=${cssFile}`);
+          return fixedHtml;
+        } else {
+          console.log('⚠️ No asset path replacements needed (already correct or pattern not matched)');
+        }
+      } else {
+        console.warn('⚠️ Could not find JS or CSS files in assets directory');
       }
+    } else {
+      console.error('❌ Assets directory does not exist:', assetsPath);
     }
   } catch (error) {
     console.error('⚠️ Error fixing HTML asset paths:', error.message);
+    console.error('   Stack:', error.stack);
   }
   return htmlContent;
 };
 
-// Serve frontend index.html for all non-API and non-asset routes (client-side routing)
-app.get('*', (req, res) => {
+// Serve index.html with asset path fixing for root and all non-API routes
+const serveIndexHtml = (req, res) => {
   // Don't serve frontend for API routes
   if (req.path.startsWith('/api')) {
     return res.status(404).json({
@@ -403,17 +436,34 @@ app.get('*', (req, res) => {
   
   // Serve frontend for all other routes (React Router)
   const indexPath = path.join(distPath, 'index.html');
+  console.log(`📄 Serving index.html for route: ${req.path}`);
   
   // Read and fix HTML if needed
   if (fs.existsSync(indexPath)) {
     let htmlContent = fs.readFileSync(indexPath, 'utf-8');
+    console.log('📄 Original HTML loaded, length:', htmlContent.length);
+    
+    // Check what asset references are in the HTML before fixing
+    const jsMatch = htmlContent.match(/src=["']\/assets\/index-([A-Za-z0-9_-]+)\.js["']/);
+    const cssMatch = htmlContent.match(/href=["']\/assets\/index-([A-Za-z0-9_-]+)\.css["']/);
+    if (jsMatch) console.log('📄 HTML references JS:', jsMatch[1]);
+    if (cssMatch) console.log('📄 HTML references CSS:', cssMatch[1]);
+    
     htmlContent = fixHtmlAssetPaths(htmlContent, distPath);
+    
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(htmlContent);
   }
   
+  console.error('❌ index.html not found at:', indexPath);
   res.status(404).send('index.html not found');
-});
+};
+
+// Serve index.html for root route
+app.get('/', serveIndexHtml);
+
+// Serve frontend index.html for all other non-API and non-asset routes (client-side routing)
+app.get('*', serveIndexHtml);
 
 // Start server with error handling
 console.log('🔄 Starting server...');
