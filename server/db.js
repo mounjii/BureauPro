@@ -50,10 +50,24 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgresql:
   // Debug: Log available MySQL-related environment variables
   console.log('🔍 Checking MySQL connection variables...');
   console.log('MYSQL_PUBLIC_URL:', process.env.MYSQL_PUBLIC_URL ? '✅ Found' : '❌ Not found');
+  if (process.env.MYSQL_PUBLIC_URL) {
+    console.log('MYSQL_PUBLIC_URL value:', process.env.MYSQL_PUBLIC_URL.replace(/:[^:@]+@/, ':****@'));
+  }
   console.log('MYSQL_URL:', process.env.MYSQL_URL ? '✅ Found' : '❌ Not found');
+  if (process.env.MYSQL_URL) {
+    console.log('MYSQL_URL value:', process.env.MYSQL_URL.replace(/:[^:@]+@/, ':****@'));
+  }
   console.log('MYSQLHOST:', process.env.MYSQLHOST || 'Not set');
   console.log('MYSQLUSER:', process.env.MYSQLUSER || 'Not set');
+  console.log('MYSQLPASSWORD:', process.env.MYSQLPASSWORD ? '✅ Set (hidden)' : 'Not set');
   console.log('MYSQLDATABASE:', process.env.MYSQLDATABASE || 'Not set');
+  console.log('MYSQLPORT:', process.env.MYSQLPORT || 'Not set');
+  
+  // Debug: Show if variables are literally "${{MySQL.MYSQL_PUBLIC_URL}}"
+  if (process.env.MYSQL_PUBLIC_URL && process.env.MYSQL_PUBLIC_URL.includes('${{')) {
+    console.log('⚠️ WARNING: MYSQL_PUBLIC_URL contains unresolved variable reference:', process.env.MYSQL_PUBLIC_URL);
+    console.log('   This means Railway did not resolve the variable reference. Check service name and syntax.');
+  }
   
   // Check if Railway MySQL URL is provided (mysql://user:password@host:port/database)
   if (process.env.MYSQL_PUBLIC_URL || process.env.MYSQL_URL) {
