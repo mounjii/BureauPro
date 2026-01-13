@@ -37,8 +37,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick }) => {
           </span>
         </div>
 
-        {/* Slide-in "Voir détails" Button */}
-        <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 ease-out z-20">
+        {/* Slide-in "Voir détails" Button - Always visible on mobile, hover on desktop */}
+        <div className="absolute bottom-0 left-0 right-0 translate-y-0 sm:translate-y-full sm:group-hover:translate-y-0 transition-transform duration-200 ease-out z-20">
           <div className="bg-bp-green py-3 text-center shadow-md">
             <span className="text-bp-black text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
               Voir détails

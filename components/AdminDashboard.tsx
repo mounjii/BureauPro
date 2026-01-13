@@ -474,15 +474,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
               <div className="flex items-center gap-3 pl-4 border-l border-bp-light/40 group relative">
                 <button
                   onClick={() => setIsSettingsModalOpen(true)}
-                  className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                  className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity touch-manipulation"
+                  title="Paramètres du compte"
                 >
                   <div className="w-8 h-8 rounded-full bg-bp-green/10 flex items-center justify-center text-[10px] font-bold text-bp-green border border-bp-green/30">
                     {currentUser.email?.charAt(0).toUpperCase() || 'A'}
                   </div>
-                  <div className="hidden md:flex flex-col items-start">
+                  <div className="hidden sm:flex flex-col items-start">
                     <span className="text-xs sm:text-sm font-medium text-bp-black">{currentUser.email}</span>
                     <span className="text-[10px] text-bp-medium">Compte</span>
                   </div>
+                  <span className="sm:hidden text-xs font-medium text-bp-black">Compte</span>
                 </button>
               </div>
             )}
@@ -491,7 +493,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
           {/* Mobile Menu Button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="sm:hidden p-2"
+            className="sm:hidden p-2 text-bp-black hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+            aria-label="Ouvrir le menu"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -514,6 +517,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         } flex`}>
         <div className="p-6 flex flex-col h-full">
+          {/* Close button for mobile */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden self-end mb-4 p-2 text-gray-400 hover:text-white rounded-lg transition-colors touch-manipulation"
+            aria-label="Fermer le menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           <nav className="space-y-1 flex-grow">
             {hasPermission('manageProducts') && (
           <button
@@ -767,7 +780,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
                         </div>
                         <p className="text-gray-400 text-[10px] sm:text-[11px] mb-3 sm:mb-4 truncate">{p.category}</p>
 
-                        <div className="flex gap-2 pt-3 sm:pt-4 border-t border-gray-50 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-2 pt-3 sm:pt-4 border-t border-gray-50">
+                          <button
+                            onClick={() => onProductClick(p)}
+                            className="flex-1 bg-bp-green text-bp-black py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider hover:bg-[#b8d03a] transition-colors duration-200 touch-manipulation"
+                          >
+                            Voir détails
+                          </button>
                           <button
                             onClick={() => handleOpenForm(p)}
                             className="flex-1 bg-gray-50 text-bp-green py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider hover:bg-bp-green/10 transition-colors duration-200 touch-manipulation"
@@ -843,23 +862,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
                       key={cat.id}
                         className="flex items-center gap-2 px-3 py-1.5 bg-bp-green/10 text-bp-black rounded-lg text-xs font-bold uppercase group border border-bp-green/30"
                     >
-                      <span>{cat.name}</span>
+                      <span className="flex-1">{cat.name}</span>
                       <button
                         onClick={() => handleOpenCategoryForm(cat)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity text-bp-green hover:text-bp-black p-1"
+                          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-bp-green hover:text-bp-black p-1 touch-manipulation"
                         title="Modifier"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                         </svg>
                       </button>
                       <button
                         onClick={() => handleDeleteCategory(cat.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1"
+                        className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1 touch-manipulation"
                         title="Supprimer"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6"/>
                           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                         </svg>
