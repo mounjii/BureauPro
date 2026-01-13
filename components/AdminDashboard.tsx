@@ -782,12 +782,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onProductClick, selecte
 
                         <div className="flex gap-2 pt-3 sm:pt-4 border-t border-gray-50">
                           <button
-                            onClick={() => onProductClick(p)}
-                            className="flex-1 bg-bp-green text-bp-black py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider hover:bg-[#b8d03a] transition-colors duration-200 touch-manipulation"
-                          >
-                            Voir détails
-                          </button>
-                          <button
                             onClick={() => handleOpenForm(p)}
                             className="flex-1 bg-gray-50 text-bp-green py-2 rounded-lg text-[9px] sm:text-[10px] font-bold uppercase tracking-wider hover:bg-bp-green/10 transition-colors duration-200 touch-manipulation"
                           >
