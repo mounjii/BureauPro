@@ -129,6 +129,13 @@ const App: React.FC = () => {
   }, [selectedCategory, searchQuery, products]);
 
   const allCategories = ['Tous', ...categories.map(cat => cat.name)];
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  
+  // Show "Tous" + first 4 categories = 5 total, or all if expanded
+  const visibleCategories = showAllCategories 
+    ? allCategories 
+    : allCategories.slice(0, 5); // "Tous" + 4 categories
+  const hasMoreCategories = allCategories.length > 5;
 
   const nextImage = () => {
     if (selectedProduct) {
@@ -164,17 +171,31 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2 px-4">
-        {allCategories.map(cat => (
+        {visibleCategories.map(cat => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg text-[8px] sm:text-[9px] font-bold uppercase tracking-widest transition-all ${
+            className={`px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 rounded-lg text-[8px] sm:text-[9px] font-bold uppercase tracking-widest transition-all touch-manipulation ${
               selectedCategory === cat ? 'bg-bp-green text-bp-black shadow-md' : 'bg-white text-bp-medium border border-bp-light hover:border-bp-green hover:text-bp-black'
             }`}
           >
             {cat}
           </button>
         ))}
+        {hasMoreCategories && (
+          <button
+            onClick={() => setShowAllCategories(!showAllCategories)}
+            className={`px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 rounded-lg text-[8px] sm:text-[9px] font-bold uppercase tracking-widest transition-all touch-manipulation flex items-center justify-center gap-1 ${
+              showAllCategories 
+                ? 'bg-bp-green/20 text-bp-black border border-bp-green' 
+                : 'bg-white text-bp-medium border border-bp-light hover:border-bp-green hover:text-bp-black'
+            }`}
+            aria-label={showAllCategories ? 'Afficher moins' : 'Afficher plus'}
+          >
+            <span className="text-lg sm:text-xl leading-none">+</span>
+            {showAllCategories && <span className="text-[7px] sm:text-[8px]">Moins</span>}
+          </button>
+        )}
       </div>
     </section>
   );
