@@ -85,20 +85,20 @@ const Alert: React.FC<AlertProps> = ({
   };
 
   return (
-    <div className={`${styles.bg} ${styles.border} border rounded-lg p-3 sm:p-4 shadow-md animate-in slide-in-from-top-2 duration-300 flex items-start gap-2 sm:gap-3 w-full`}>
-      <div className={`${styles.iconBg} ${styles.icon} rounded-full p-1 sm:p-1.5 flex-shrink-0`}>
+    <div className={`${styles.bg} ${styles.border} border rounded-lg p-2.5 sm:p-3 md:p-4 shadow-lg animate-in slide-in-from-top-2 duration-300 flex items-start gap-2 sm:gap-3 w-full max-w-full`}>
+      <div className={`${styles.iconBg} ${styles.icon} rounded-full p-1 sm:p-1.5 flex-shrink-0 mt-0.5`}>
         {icons[type]}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className={`${styles.text} text-xs sm:text-sm font-medium break-words`}>{message}</p>
+      <div className="flex-1 min-w-0 pr-1">
+        <p className={`${styles.text} text-[11px] sm:text-xs md:text-sm font-medium break-words leading-relaxed`}>{message}</p>
       </div>
       {onClose && (
         <button
           onClick={onClose}
-          className={`${styles.text} hover:opacity-70 transition-opacity flex-shrink-0 p-1 touch-manipulation`}
+          className={`${styles.text} hover:opacity-70 active:opacity-50 transition-opacity flex-shrink-0 p-1 sm:p-1.5 touch-manipulation min-w-[32px] min-h-[32px] flex items-center justify-center`}
           aria-label="Fermer"
         >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>

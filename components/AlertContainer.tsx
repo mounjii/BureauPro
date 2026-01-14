@@ -19,18 +19,18 @@ const AlertContainer: React.FC<AlertContainerProps> = ({
   position = 'top-right'
 }) => {
   const positionClasses = {
-    'top-right': 'top-2 sm:top-4 right-2 sm:right-4',
-    'top-left': 'top-2 sm:top-4 left-2 sm:left-4',
-    'top-center': 'top-2 sm:top-4 left-1/2 transform -translate-x-1/2',
-    'bottom-right': 'bottom-2 sm:bottom-4 right-2 sm:right-4',
-    'bottom-left': 'bottom-2 sm:bottom-4 left-2 sm:left-4',
-    'bottom-center': 'bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2'
+    'top-right': 'top-2 sm:top-3 md:top-4 right-2 sm:right-3 md:right-4',
+    'top-left': 'top-2 sm:top-3 md:top-4 left-2 sm:left-3 md:left-4',
+    'top-center': 'top-2 sm:top-3 md:top-4 left-1/2 transform -translate-x-1/2',
+    'bottom-right': 'bottom-2 sm:bottom-3 md:bottom-4 right-2 sm:right-3 md:right-4',
+    'bottom-left': 'bottom-2 sm:bottom-3 md:bottom-4 left-2 sm:left-3 md:left-4',
+    'bottom-center': 'bottom-2 sm:bottom-3 md:bottom-4 left-1/2 transform -translate-x-1/2'
   };
 
   if (alerts.length === 0) return null;
 
   return (
-    <div className={`fixed ${positionClasses[position]} z-50 space-y-2 sm:space-y-3 max-w-[calc(100%-1rem)] sm:max-w-md w-full px-1 sm:px-0`}>
+    <div className={`fixed ${positionClasses[position]} z-[9999] space-y-2 sm:space-y-2.5 md:space-y-3 max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-2rem)] md:max-w-md w-[calc(100vw-1rem)] sm:w-[calc(100vw-2rem)] md:w-full px-0`}>
       {alerts.map((alert) => (
         <Alert
           key={alert.id}
